@@ -233,7 +233,29 @@ h1 {
 @media (max-width: 650px) {
   .topbar {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 0.65rem;
+  }
+
+  .brand-with-logo {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .meta {
+    width: 100%;
+    justify-content: space-between;
+    font-size: 0.95rem;
+  }
+
+  .brand-logo-wrap {
+    width: 54px;
+    height: 54px;
+    border-radius: 12px;
+  }
+
+  .controls {
+    gap: 0.45rem;
   }
 
   .brand-logo-wrap {
@@ -245,5 +267,21 @@ h1 {
     min-width: 72px;
     padding: 0.48rem 0.85rem;
     font-size: 0.82rem;
+  }
+}
+
+
+@media (max-width: 420px) {
+  .app {
+    width: 95vw;
+    padding-top: 1.1rem;
+  }
+
+  .brand-sub {
+    font-size: 0.72rem;
+  }
+
+  h1 {
+    font-size: 1.6rem;
   }
 }

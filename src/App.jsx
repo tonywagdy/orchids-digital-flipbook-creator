@@ -102,7 +102,6 @@ function App() {
   }, [])
 
   const totalPages = pages.length + 1
-  const hasInnerPages = pages.length > 0
   const lastPage = totalPages - 1
   const progress = totalPages > 0 ? Math.round(((currentPage + 1) / totalPages) * 100) : 0
 
@@ -116,10 +115,6 @@ function App() {
   const goPrev = () => bookRef.current?.pageFlip()?.flipPrev()
   const goFirst = () => bookRef.current?.pageFlip()?.flip(0)
   const goLast = () => bookRef.current?.pageFlip()?.flip(lastPage)
-
-  const helpText = hasInnerPages
-    ? 'الغلاف ثابت تلقائيًا. لإضافة صفحات جديدة: ارفع ملفات page1.jpg, page2.jpg ... داخل public/pages.'
-    : 'الغلاف ظاهر. أضف صفحات الكتالوج داخل public/pages بأسماء page1.jpg, page2.jpg ...'
 
   return (
     <main className="app" dir="rtl">
@@ -164,13 +159,12 @@ function App() {
           minHeight={360}
           maxHeight={740}
           maxShadowOpacity={0.5}
-          showCover
           mobileScrollSupport
           flippingTime={700}
           onFlip={(e) => setCurrentPage(e.data)}
           className="flipbook"
           drawShadow
-          usePortrait={false}
+          usePortrait
           startZIndex={10}
           autoSize
           showPageCorners
@@ -190,7 +184,6 @@ function App() {
         <button onClick={goFirst} disabled={currentPage === 0}>⏮ الأول</button>
       </nav>
 
-      <footer className="hint">{helpText}</footer>
     </main>
   )
 }
