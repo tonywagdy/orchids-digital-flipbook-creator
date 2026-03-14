@@ -1,22 +1,10 @@
-import { forwardRef, useRef, useState } from 'react'
+import { forwardRef, useEffect, useRef, useState } from 'react'
 import HTMLFlipBook from 'react-pageflip'
 import './App.css'
 
-const pageImages = import.meta.glob('/pages/*.{jpg,jpeg,png,webp}', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-})
-
-const pages = Object.entries(pageImages)
-  .sort(([pathA], [pathB]) => {
-    const getNumber = (value) => {
-      const match = value.match(/(\d+)(?=\.[a-z]+$)/i)
-      return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER
-    }
-    return getNumber(pathA) - getNumber(pathB) || pathA.localeCompare(pathB)
-  })
-  .map(([, url]) => url)
+const MAX_PAGES_TO_SCAN = 300
+const CONSECUTIVE_MISSES_LIMIT = 12
+const SUPPORTED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp']
 
 const ImagePage = forwardRef(({ src, index }, ref) => (
   <div ref={ref} className="page">
@@ -25,13 +13,74 @@ const ImagePage = forwardRef(({ src, index }, ref) => (
 ))
 ImagePage.displayName = 'ImagePage'
 
+function buildPageUrl(pageNumber, extension) {
+  return `${import.meta.env.BASE_URL}pages/page${pageNumber}.${extension}`
+}
+
+function imageExists(url) {
+  return new Promise((resolve) => {
+    const image = new Image()
+    image.onload = () => resolve(true)
+    image.onerror = () => resolve(false)
+    image.src = `${url}?v=${Date.now()}`
+  })
+}
+
+async function findExistingPageUrl(pageNumber) {
+  for (const extension of SUPPORTED_EXTENSIONS) {
+    const url = buildPageUrl(pageNumber, extension)
+    const exists = await imageExists(url)
+    if (exists) return url
+  }
+  return null
+}
+
 function App() {
   const bookRef = useRef(null)
+  const [pages, setPages] = useState([])
+  const [isLoadingPages, setIsLoadingPages] = useState(true)
   const [currentPage, setCurrentPage] = useState(0)
+
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadPages() {
+      const discovered = []
+      let misses = 0
+
+      for (let i = 1; i <= MAX_PAGES_TO_SCAN && misses < CONSECUTIVE_MISSES_LIMIT; i += 1) {
+        const foundUrl = await findExistingPageUrl(i)
+        if (foundUrl) {
+          discovered.push(foundUrl)
+          misses = 0
+        } else {
+          misses += 1
+        }
+      }
+
+      if (!isCancelled) {
+        setPages(discovered)
+        setCurrentPage(0)
+        setIsLoadingPages(false)
+      }
+    }
+
+    loadPages()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [])
+
   const hasPages = pages.length > 0
   const lastPage = hasPages ? pages.length - 1 : 0
   const progress = hasPages ? Math.round(((currentPage + 1) / pages.length) * 100) : 0
-  const pageLabel = hasPages ? `صفحة ${currentPage + 1} / ${pages.length}` : 'لا توجد صفحات حالياً'
+
+  const pageLabel = isLoadingPages
+    ? 'جاري تحميل الصفحات...'
+    : hasPages
+      ? `صفحة ${currentPage + 1} / ${pages.length}`
+      : 'لا توجد صفحات حالياً'
 
   const goNext = () => bookRef.current?.pageFlip()?.flipNext()
   const goPrev = () => bookRef.current?.pageFlip()?.flipPrev()
@@ -39,8 +88,8 @@ function App() {
   const goLast = () => bookRef.current?.pageFlip()?.flip(lastPage)
 
   const helpText = hasPages
-    ? 'لإضافة صور جديدة: انسخ أي صورة داخل public/pages وسيتم عرضها تلقائياً.'
-    : 'أضف صور الصفحات داخل مجلد public/pages لتظهر تلقائياً هنا.'
+    ? 'لإضافة صور جديدة: ارفع ملف باسم page12.jpg (أو png/webp) داخل public/pages وسيظهر تلقائياً.'
+    : 'أضف صور الصفحات داخل public/pages بأسماء page1.jpg, page2.jpg ...'
 
   return (
     <main className="app" dir="rtl">
@@ -90,7 +139,7 @@ function App() {
         </section>
       ) : (
         <section className="book-shell empty-state">
-          <p>لا يوجد أي صور داخل الكتالوج حالياً.</p>
+          <p>{isLoadingPages ? 'جاري تجهيز الكتالوج...' : 'لا يوجد أي صور داخل الكتالوج حالياً.'}</p>
         </section>
       )}
 
